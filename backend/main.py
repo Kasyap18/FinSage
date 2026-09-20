@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
+from fraud_detect.inference.fraud_predict import predict_fraud
 
 app = FastAPI(
     title="ML Risk Detection API",
@@ -28,6 +28,10 @@ app.add_middleware(
 class PredictionResponse(BaseModel):
     prediction: int
 
+class FraudPredictionResponse(BaseModel):
+    probability: float
+    prediction: int
+    label: str
 
 def mock_prediction(payload: dict[str, Any]) -> int:
     """
@@ -64,7 +68,42 @@ def predict_loan(payload: dict[str, Any]):
     return {"prediction": prediction}
 
 
-@app.post("/api/v1/fraud/predict", response_model=PredictionResponse)
-def predict_fraud(payload: dict[str, Any]):
-    prediction = mock_prediction(payload)
-    return {"prediction": prediction}
+# @app.post("/api/v1/fraud/predict", response_model=PredictionResponse)
+# def predict_fraud(payload: dict[str, Any]):
+#     prediction = mock_prediction(payload)
+#     return {"prediction": prediction}
+
+@app.post("/api/v1/fraud/predict", response_model=FraudPredictionResponse)
+def predict_fraud_api(payload: dict[str, Any]):
+
+    result = predict_fraud(payload)
+
+    return result
+
+# transaction = {
+#     "trans_date_trans_time": "2019-01-01 00:00:00",
+#     "cc_num": 1234567890123456,
+#     "merchant": "fraud_Rippin, Kub and Mann",
+#     "category": "misc_net",
+#     "amt": 100.5,
+#     "first": "John",
+#     "last": "Doe",
+#     "gender": "M",
+#     "street": "123 Main St",
+#     "city": "New York",
+#     "state": "NY",
+#     "zip": 10001,
+#     "lat": 40.7128,
+#     "long": -74.0060,
+#     "city_pop": 100000,
+#     "job": "Engineer",
+#     "dob": "1985-01-01",
+#     "trans_num": "abc123",
+#     "unix_time": 1546300800,
+#     "merch_lat": 40.7130,
+#     "merch_long": -74.0050
+# }
+
+# result = predict_fraud_api(transaction)
+
+# print(result)
