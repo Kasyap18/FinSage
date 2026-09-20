@@ -1,6 +1,5 @@
 # Extras
-backend/fraud_detect/data/fraudTrain.csv
-backend/fraud_detect/data/fraudTest.csv
+
 
 # Node ignores
 
