@@ -1,7 +1,7 @@
 {
     "model_name": "XGBoost",
     "model_file": "model.xgb.json",
-    "threshold": 0.64,
+    "threshold": 0.66,
     "categorical_features": [
         "merchant",
         "category",
