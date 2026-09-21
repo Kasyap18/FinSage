@@ -351,10 +351,10 @@ def predict_fraud(data):
 
     # Return JSON-compatible dictionary
     return {
-        "fraud_probability": round(
+        "probability": round(
             probability,
             6
         ),
-        "fraud_prediction": prediction,
-        "fraud_label": label
+        "prediction": prediction,
+        "label": label
     }
