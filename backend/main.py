@@ -80,6 +80,7 @@ def predict_fraud_api(payload: dict[str, Any]):
 
     return result
 
+# Not Fraud
 # transaction = {
 #     "trans_date_trans_time": "2019-01-01 00:00:00",
 #     "cc_num": 1234567890123456,
@@ -102,6 +103,31 @@ def predict_fraud_api(payload: dict[str, Any]):
 #     "unix_time": 1546300800,
 #     "merch_lat": 40.7130,
 #     "merch_long": -74.0050
+# }
+
+# # Fraud
+# transaction = {
+#     "trans_date_trans_time": "02-01-2019 01:06",
+#     "cc_num": 4.61e12,
+#     "merchant": "fraud_Rutherford-Mertz",
+#     "category": "grocery_pos",
+#     "amt": 281.06,
+#     "first": "Jason",
+#     "last": "Murphy",
+#     "gender": "M",
+#     "street": "542 Steve Curve Suite 011",
+#     "city": "Collettsville",
+#     "state": "NC",
+#     "zip": 28611,
+#     "lat": 35.9946,
+#     "long": -81.7266,
+#     "city_pop": 885,
+#     "job": "Soil scientist",
+#     "dob": "15-09-1988",
+#     "trans_num": "e8a81877ae9a0a7f883e15cb39dc4022",
+#     "unix_time": 1.33e9,
+#     "merch_lat": 36.43012,
+#     "merch_long": -81.1795
 # }
 
 # result = predict_fraud_api(transaction)
