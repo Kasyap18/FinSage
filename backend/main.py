@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from loan_default.prediction import predict_loan
 
 
 app = FastAPI(
@@ -28,6 +29,10 @@ app.add_middleware(
 class PredictionResponse(BaseModel):
     prediction: int
 
+class LoanPredictionResponse(BaseModel):
+    probability: float
+    prediction: int
+    label: str
 
 def mock_prediction(payload: dict[str, Any]) -> int:
     """
@@ -58,10 +63,18 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/api/v1/loan/predict", response_model=PredictionResponse)
-def predict_loan(payload: dict[str, Any]):
-    prediction = mock_prediction(payload)
-    return {"prediction": prediction}
+@app.post(
+    "/api/v1/loan/predict",
+    response_model=LoanPredictionResponse
+)
+def predict_loan_api(payload: dict[str, Any]):
+    """
+    Predict loan status using the trained neural network.
+    """
+
+    result = predict_loan(payload)
+
+    return result
 
 
 @app.post("/api/v1/fraud/predict", response_model=PredictionResponse)
