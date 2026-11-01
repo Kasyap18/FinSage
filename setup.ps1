@@ -4,15 +4,20 @@
 #
 # project/
 # ├── frontend/
+# │   ├── run.ps1
+# │   └── run.sh
 # ├── backend/
-# └── setup.ps1
+# │   ├── run.ps1
+# │   └── run.sh
+# ├── setup.ps1
+# └── setup.sh
 #
 # Requirements:
-#   Python 3.12.13
+#   Python 3.12.13 (managed via uv)
 #   Node.js 24.x
 #   npm
 #
-# Windows PowerShell version of setup.sh
+# PowerShell version of setup.sh
 
 $ErrorActionPreference = "Stop"
 
@@ -23,6 +28,22 @@ $VENV_DIR = Join-Path $BACKEND_DIR ".venv"
 
 $REQUIRED_PYTHON = "3.12.13"
 $REQUIRED_NODE_MAJOR = "24"
+
+function Get-VenvPythonPath {
+    param([string]$VenvPath)
+
+    $winPython = Join-Path $VenvPath "Scripts\python.exe"
+    if (Test-Path $winPython -PathType Leaf) {
+        return $winPython
+    }
+
+    $unixPython = Join-Path $VenvPath "bin/python"
+    if (Test-Path $unixPython -PathType Leaf) {
+        return $unixPython
+    }
+
+    return $winPython
+}
 
 function Print-Error {
     param([string]$Message)
@@ -143,7 +164,7 @@ Write-Host "Creating backend virtual environment..."
 if (Test-Path $VENV_DIR) {
     Write-Host "backend/.venv already exists"
 
-    $VENV_PYTHON = Join-Path $VENV_DIR "Scripts\python.exe"
+    $VENV_PYTHON = Get-VenvPythonPath $VENV_DIR
 
     if (Test-Path $VENV_PYTHON) {
         $VENV_VERSION = (& $VENV_PYTHON --version).Trim() -replace "^Python\s+", ""
@@ -177,7 +198,7 @@ else {
     }
 }
 
-$VENV_PYTHON = Join-Path $VENV_DIR "Scripts\python.exe"
+$VENV_PYTHON = Get-VenvPythonPath $VENV_DIR
 
 if (-not (Test-Path $VENV_PYTHON)) {
     Print-Error @"
@@ -210,10 +231,6 @@ Write-Host "backend/.venv uses Python $VENV_VERSION"
 # ============================================================
 
 Print-Step "[2/7] Setting up Node.js 24"
-
-# ------------------------------------------------------------
-# Install Node.js 24 using winget when available
-# ------------------------------------------------------------
 
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
 
@@ -295,10 +312,10 @@ Write-Host "  $NPM_VERSION"
 Write-Host "npm $NPM_VERSION verified"
 
 # ============================================================
-# 4. Verify project directories
+# 4. Verify project directories and ML model artifacts
 # ============================================================
 
-Print-Step "[4/7] Verifying project structure"
+Print-Step "[4/7] Verifying project structure and ML models"
 
 if (-not (Test-Path $FRONTEND_DIR -PathType Container)) {
     Print-Error @"
@@ -320,6 +337,10 @@ Expected:
 
 $FRONTEND_PACKAGE = Join-Path $FRONTEND_DIR "package.json"
 $BACKEND_REQUIREMENTS = Join-Path $BACKEND_DIR "requirements.txt"
+$LOAN_MODEL = Join-Path $BACKEND_DIR "loan_default\models\loan_default_nn.keras"
+$LOAN_PREPROCESSOR = Join-Path $BACKEND_DIR "loan_default\models\preprocessor.pkl"
+$FRAUD_MODEL = Join-Path $BACKEND_DIR "fraud_detect\models\model.xgb.json"
+$FRAUD_PREPROCESSOR = Join-Path $BACKEND_DIR "fraud_detect\models\preprocessing.pkl"
 
 if (-not (Test-Path $FRONTEND_PACKAGE -PathType Leaf)) {
     Print-Error @"
@@ -339,57 +360,40 @@ Expected:
 "@
 }
 
+foreach ($artifact in @($LOAN_MODEL, $LOAN_PREPROCESSOR, $FRAUD_MODEL, $FRAUD_PREPROCESSOR)) {
+    if (-not (Test-Path $artifact -PathType Leaf)) {
+        Print-Error @"
+Required ML model artifact not found:
+  $artifact
+"@
+    }
+}
+
 Write-Host "frontend/ found"
 Write-Host "backend/ found"
 Write-Host "frontend/package.json found"
 Write-Host "backend/requirements.txt found"
+Write-Host "Loan Default & Fraud Detection model artifacts verified"
 
 # ============================================================
-# 5. Create Python virtual environment
+# 5. Verify Python virtual environment
 # ============================================================
 
-Print-Step "[5/7] Setting up backend virtual environment"
+Print-Step "[5/7] Verifying backend virtual environment"
 
-Write-Host "Creating/verifying backend virtual environment..."
-
-if (-not (Test-Path $VENV_DIR -PathType Container)) {
-    Write-Host "Creating:"
-    Write-Host "  backend/.venv"
-
-    & uv venv $VENV_DIR --python $REQUIRED_PYTHON
-
-    if ($LASTEXITCODE -ne 0) {
-        Print-Error "Failed to create backend virtual environment."
-    }
-
-    Write-Host "Virtual environment created"
-}
-else {
-    Write-Host "backend/.venv already exists"
-}
-
-# ------------------------------------------------------------
-# Verify Python executable
-# ------------------------------------------------------------
-
-$VENV_PYTHON = Join-Path $VENV_DIR "Scripts\python.exe"
+$VENV_PYTHON = Get-VenvPythonPath $VENV_DIR
 
 if (-not (Test-Path $VENV_PYTHON -PathType Leaf)) {
     Print-Error @"
-Backend virtual environment was created but Python executable was not found.
+Backend virtual environment Python executable was not found.
 
 Expected:
   $VENV_PYTHON
 "@
 }
 
-# ------------------------------------------------------------
-# Verify Python version
-# ------------------------------------------------------------
-
 $VENV_VERSION = (& $VENV_PYTHON --version).Trim() -replace "^Python\s+", ""
 
-Write-Host ""
 Write-Host "Backend virtual environment:"
 Write-Host "  $VENV_DIR"
 Write-Host "Python executable:"
@@ -397,32 +401,13 @@ Write-Host "  $VENV_PYTHON"
 Write-Host "Python version:"
 Write-Host "  $VENV_VERSION"
 
-if ($VENV_VERSION -ne $REQUIRED_PYTHON) {
-    Print-Error @"
-The backend virtual environment has the wrong Python version.
-
-Required:
-  Python $REQUIRED_PYTHON
-
-Found:
-  Python $VENV_VERSION
-"@
-}
-
-Write-Host ""
-Write-Host "Backend venv uses Python $VENV_VERSION"
-
 # ============================================================
 # 6. Install backend + frontend dependencies
 # ============================================================
 
-Print-Step "[6/7] Installing backend dependencies"
+Print-Step "[6/7] Installing backend and frontend dependencies"
 
 Write-Host "Installing backend requirements using uv..."
-
-if (-not (Test-Path $BACKEND_REQUIREMENTS -PathType Leaf)) {
-    Print-Error "backend/requirements.txt not found."
-}
 
 & uv pip install --python $VENV_PYTHON -r $BACKEND_REQUIREMENTS
 
@@ -477,18 +462,23 @@ else {
 $FRONTEND_ENV_EXAMPLE = Join-Path $FRONTEND_DIR ".env.example"
 $FRONTEND_ENV_LOCAL = Join-Path $FRONTEND_DIR ".env.local"
 
-if (Test-Path $FRONTEND_ENV_EXAMPLE -PathType Leaf) {
-    if (-not (Test-Path $FRONTEND_ENV_LOCAL -PathType Leaf)) {
+if (-not (Test-Path $FRONTEND_ENV_LOCAL -PathType Leaf)) {
+    if (Test-Path $FRONTEND_ENV_EXAMPLE -PathType Leaf) {
         Copy-Item $FRONTEND_ENV_EXAMPLE $FRONTEND_ENV_LOCAL
-        Write-Host "Created frontend/.env.local"
+        Write-Host "Created frontend/.env.local from .env.example"
     }
     else {
-        Write-Host "frontend/.env.local already exists"
+        @"
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_LOAN_PREDICT_ENDPOINT=/api/v1/loan/predict
+VITE_FRAUD_PREDICT_ENDPOINT=/api/v1/fraud/predict
+VITE_USE_MOCK=false
+"@ | Set-Content -Path $FRONTEND_ENV_LOCAL -Encoding UTF8
+        Write-Host "Created default frontend/.env.local"
     }
 }
 else {
-    Write-Host "No frontend/.env.example found"
-    Write-Host "Skipping frontend .env.local creation"
+    Write-Host "frontend/.env.local already exists"
 }
 
 # ============================================================
@@ -524,8 +514,7 @@ Write-Host ""
 Write-Host "Terminal 1 - Backend:"
 Write-Host ""
 Write-Host "  cd backend"
-Write-Host "  .\.venv\Scripts\Activate.ps1"
-Write-Host "  uvicorn main:app --reload --host 127.0.0.1 --port 8000"
+Write-Host "  .\run.ps1"
 Write-Host ""
 
 Write-Host "Backend API:"
@@ -539,10 +528,16 @@ Write-Host ""
 Write-Host "------------------------------------------------------------"
 Write-Host ""
 
-Write-Host "Terminal 2 - Frontend:"
+Write-Host "Terminal 2 - Frontend (V2 with Fraud & Loan ML models):"
 Write-Host ""
 Write-Host "  cd frontend"
-Write-Host "  npm run dev"
+Write-Host "  .\run.ps1 v2        # or: npm run dev2"
+Write-Host ""
+
+Write-Host "Terminal 2 - Frontend (V1):"
+Write-Host ""
+Write-Host "  cd frontend"
+Write-Host "  .\run.ps1           # or: npm run dev"
 Write-Host ""
 
 Write-Host "Frontend:"

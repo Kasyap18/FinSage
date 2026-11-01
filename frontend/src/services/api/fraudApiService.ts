@@ -1,24 +1,37 @@
 import type { FraudFormData } from "@/features/fraud/fraudSchema";
-import type { PredictionService } from "@/types/models";
+import type { PredictionResult, PredictionService } from "@/types/models";
 import { postPrediction } from "@/services/api/apiClient";
 
 type BackendPredictionResponse =
   | number
   | {
       prediction?: number;
+      probability?: number;
+      label?: string;
       result?: number;
       fraudulent?: number;
     };
 
 const endpoint = import.meta.env.VITE_FRAUD_PREDICT_ENDPOINT ?? "";
 
-function extractPrediction(response: BackendPredictionResponse): 0 | 1 {
+function extractPredictionResult(
+  response: BackendPredictionResponse,
+): PredictionResult {
+  if (typeof response === "number") {
+    if (response !== 0 && response !== 1) {
+      throw new Error(
+        "Fraud API returned an invalid prediction. Expected binary 0 or 1.",
+      );
+    }
+    return {
+      prediction: response,
+      probability: response === 1 ? 1 : 0,
+      label: response === 1 ? "FRAUD" : "NOT FRAUD",
+    };
+  }
+
   const value =
-    typeof response === "number"
-      ? response
-      : response.prediction ??
-        response.result ??
-        response.fraudulent;
+    response.prediction ?? response.result ?? response.fraudulent;
 
   if (value !== 0 && value !== 1) {
     throw new Error(
@@ -26,7 +39,19 @@ function extractPrediction(response: BackendPredictionResponse): 0 | 1 {
     );
   }
 
-  return value;
+  return {
+    prediction: value,
+    probability:
+      typeof response.probability === "number"
+        ? response.probability
+        : undefined,
+    label:
+      typeof response.label === "string"
+        ? response.label
+        : value === 1
+          ? "FRAUD"
+          : "NOT FRAUD",
+  };
 }
 
 export const fraudApiService: PredictionService<FraudFormData> = {
@@ -36,6 +61,6 @@ export const fraudApiService: PredictionService<FraudFormData> = {
       BackendPredictionResponse
     >(endpoint, input);
 
-    return extractPrediction(response);
+    return extractPredictionResult(response);
   },
 };

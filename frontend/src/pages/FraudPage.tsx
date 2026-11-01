@@ -18,7 +18,7 @@ import {
 import { fraudSchema, type FraudFormData } from "@/features/fraud/fraudSchema";
 // import { mockFraudService } from "@/services/mock/mockFraudService";
 import { fraudApiService } from "@/services/api/fraudApiService";
-import type { Prediction } from "@/types/models";
+import type { PredictionOutput } from "@/types/models";
 
 const steps = [
   "User & Transaction",
@@ -126,7 +126,7 @@ function FraudField({
 
 export function FraudPage() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [prediction, setPrediction] = useState<PredictionOutput | null>(null);
   const [serviceError, setServiceError] = useState<string | null>(null);
 
   const {

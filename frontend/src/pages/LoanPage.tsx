@@ -21,7 +21,7 @@ import {
   type LoanFormData,
 } from "@/features/loan/loanSchema";
 import { loanApiService } from "@/services/api/loanApiService";
-import type { Prediction } from "@/types/models";
+import type { PredictionOutput } from "@/types/models";
 
 const steps = [
   "Applicant & Loan Setup",
@@ -154,7 +154,7 @@ function LoanField({
 export function LoanPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [prediction, setPrediction] =
-    useState<Prediction | null>(null);
+    useState<PredictionOutput | null>(null);
   const [serviceError, setServiceError] =
     useState<string | null>(null);
 

@@ -484,18 +484,21 @@ else
 fi
 
 # Frontend .env.local
-if [ -f "$FRONTEND_DIR/.env.example" ]; then
-
-    if [ ! -f "$FRONTEND_DIR/.env.local" ]; then
+if [ ! -f "$FRONTEND_DIR/.env.local" ]; then
+    if [ -f "$FRONTEND_DIR/.env.example" ]; then
         cp "$FRONTEND_DIR/.env.example" "$FRONTEND_DIR/.env.local"
-        echo "✓ Created frontend/.env.local"
+        echo "✓ Created frontend/.env.local from .env.example"
     else
-        echo "✓ frontend/.env.local already exists"
+        cat << 'EOF' > "$FRONTEND_DIR/.env.local"
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_LOAN_PREDICT_ENDPOINT=/api/v1/loan/predict
+VITE_FRAUD_PREDICT_ENDPOINT=/api/v1/fraud/predict
+VITE_USE_MOCK=false
+EOF
+        echo "✓ Created default frontend/.env.local"
     fi
-
 else
-    echo "No frontend/.env.example found"
-    echo "Skipping frontend .env.local creation"
+    echo "✓ frontend/.env.local already exists"
 fi
 
 # ============================================================
@@ -531,8 +534,7 @@ echo ""
 echo "Terminal 1 - Backend:"
 echo ""
 echo "  cd backend"
-echo "  source .venv/bin/activate"
-echo "  uvicorn main:app --reload --host 127.0.0.1 --port 8000"
+echo "  ./run.sh"
 echo ""
 
 echo "Backend API:"
@@ -546,10 +548,16 @@ echo ""
 echo "------------------------------------------------------------"
 echo ""
 
-echo "Terminal 2 - Frontend:"
+echo "Terminal 2 - Frontend (V2 with Fraud & Loan ML models):"
 echo ""
 echo "  cd frontend"
-echo "  npm run dev"
+echo "  ./run.sh v2         # or: npm run dev2"
+echo ""
+
+echo "Terminal 2 - Frontend (V1):"
+echo ""
+echo "  cd frontend"
+echo "  ./run.sh            # or: npm run dev"
 echo ""
 
 echo "Frontend:"

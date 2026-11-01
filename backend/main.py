@@ -4,11 +4,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from fraud_detect.inference.fraud_predict import predict_fraud
+from loan_default.prediction import predict_loan
 
 app = FastAPI(
     title="ML Risk Detection API",
-    version="0.1.0",
-    description="Phase 6.5 mock prediction API. Replace prediction logic with the real model later.",
+    version="0.2.0",
+    description="Loan Default (Neural Network) and Fraud Detection (XGBoost) prediction API.",
 )
 
 # Development CORS configuration.
@@ -29,18 +31,16 @@ class PredictionResponse(BaseModel):
     prediction: int
 
 
-def mock_prediction(payload: dict[str, Any]) -> int:
-    """
-    Temporary mock prediction.
+class LoanPredictionResponse(BaseModel):
+    probability: float
+    prediction: int
+    label: str
 
-    IMPORTANT:
-    This function is intentionally isolated so it can later be replaced by:
-        preprocessing -> scaler/encoder -> model.predict() -> 0/1
 
-    For Phase 6.5 it always returns 0 (genuine / no default).
-    """
-    _ = payload
-    return 0
+class FraudPredictionResponse(BaseModel):
+    probability: float
+    prediction: int
+    label: str
 
 
 @app.get("/")
@@ -48,8 +48,8 @@ def root():
     return {
         "service": "ML Risk Detection API",
         "status": "running",
-        "phase": "6.5",
-        "mock": True,
+        "version": "0.2.0",
+        "mock": False,
     }
 
 
@@ -58,13 +58,13 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/api/v1/loan/predict", response_model=PredictionResponse)
-def predict_loan(payload: dict[str, Any]):
-    prediction = mock_prediction(payload)
-    return {"prediction": prediction}
+@app.post("/api/v1/loan/predict", response_model=LoanPredictionResponse)
+def predict_loan_api(payload: dict[str, Any]):
+    result = predict_loan(payload)
+    return result
 
 
-@app.post("/api/v1/fraud/predict", response_model=PredictionResponse)
-def predict_fraud(payload: dict[str, Any]):
-    prediction = mock_prediction(payload)
-    return {"prediction": prediction}
+@app.post("/api/v1/fraud/predict", response_model=FraudPredictionResponse)
+def predict_fraud_api(payload: dict[str, Any]):
+    result = predict_fraud(payload)
+    return result
