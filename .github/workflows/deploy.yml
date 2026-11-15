@@ -42,7 +42,10 @@ jobs:
       - name: Build frontend for GitHub Pages
         env:
           GITHUB_PAGES: "true"
-          VITE_USE_MOCK: "true"
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || secrets.VITE_API_BASE_URL || 'https://finsage-api-5yir.onrender.com' }}
+          VITE_USE_MOCK: ${{ vars.VITE_USE_MOCK || 'false' }}
+          VITE_LOAN_PREDICT_ENDPOINT: "/api/v1/loan/predict"
+          VITE_FRAUD_PREDICT_ENDPOINT: "/api/v1/fraud/predict"
         run: npm run build:v2
 
       - name: Setup Pages
