@@ -1,7 +1,16 @@
 import type { FraudFormDataV2 } from "./fraud/fraudSchemaV2";
-import type { LoanFormDataV2 } from "./loan/loanSchemaV2";
+import type { LoanFormData } from "./loan/loanSchemaV2";
 
-export const LOAN_NO_DEFAULT_SAMPLE_V2: LoanFormDataV2 = {
+export interface ExampleScenario<T> {
+  id: string;
+  title: string;
+  badge: string;
+  badgeType: "success" | "danger" | "warning";
+  summary: string;
+  data: T;
+}
+
+export const LOAN_NO_DEFAULT_SAMPLE_V2: LoanFormData = {
   id: 84256,
   loan_limit: "CF",
   gender: "Joint",
@@ -36,7 +45,7 @@ export const LOAN_NO_DEFAULT_SAMPLE_V2: LoanFormDataV2 = {
   Security_Type: "Direct Security",
 };
 
-export const LOAN_DEFAULT_SAMPLE_V2: LoanFormDataV2 = {
+export const LOAN_DEFAULT_SAMPLE_V2: LoanFormData = {
   id: 29211,
   loan_limit: "NCF",
   gender: "Male",
@@ -70,6 +79,68 @@ export const LOAN_DEFAULT_SAMPLE_V2: LoanFormDataV2 = {
   Region: "North",
   Security_Type: "Direct Security",
 };
+
+export const LOAN_MODERATE_SAMPLE_V2: LoanFormData = {
+  id: 48920,
+  loan_limit: "CF",
+  gender: "Female",
+  approv_in_adv: "Pre-approved",
+  loan_type: "Loan Type 1",
+  loan_purpose: "Purpose 1",
+  property_value: 700000,
+  construction_type: "Site Built (SB)",
+  occupancy_type: "Primary Residence",
+  secured_by: "Home",
+  total_units: "1 Unit",
+  credit_worthiness: "Credit Level 1",
+  open_credit: "No Open Credit",
+  business_or_commercial: "Non-Business/Commercial",
+  income: 14500,
+  credit_type: "Equifax (EQUI)",
+  Credit_Score: 710,
+  co_applicant_credit_type: "Experian (EXP)",
+  age: "45–54",
+  loan_amount: 380000,
+  rate_of_interest: 3.85,
+  interest_rate_spread: 0.08,
+  upfront_charges: 950.0,
+  term: 360,
+  submission_of_application: "Submitted through Institution",
+  LTV: 54.285714,
+  dtir1: 27,
+  neg_ammortization: "No Negative Amortization",
+  interest_only: "Principal + Interest",
+  lump_sum_payment: "No Lump Sum Payment",
+  Region: "Central",
+  Security_Type: "Direct Security",
+};
+
+export const LOAN_EXAMPLES: ExampleScenario<LoanFormData>[] = [
+  {
+    id: "low-risk",
+    title: "Low Risk Application",
+    badge: "No Default",
+    badgeType: "success",
+    summary: "$626.5k loan • 47.9% LTV • Conforming (CF) • Joint",
+    data: LOAN_NO_DEFAULT_SAMPLE_V2,
+  },
+  {
+    id: "high-risk",
+    title: "High Risk Application",
+    badge: "Default Likely",
+    badgeType: "danger",
+    summary: "$3.58M jumbo • 68.7% LTV • Non-Conforming (NCF) • 0.39 spread",
+    data: LOAN_DEFAULT_SAMPLE_V2,
+  },
+  {
+    id: "moderate-risk",
+    title: "Suburban Homebuyer",
+    badge: "Default Likely",
+    badgeType: "warning",
+    summary: "$380k loan • 54.3% LTV • Pre-approved • Central Region",
+    data: LOAN_MODERATE_SAMPLE_V2,
+  },
+];
 
 export const FRAUD_GENUINE_SAMPLE_V2: FraudFormDataV2 = {
   first: "John",
@@ -118,3 +189,54 @@ export const FRAUD_HIGH_RISK_SAMPLE_V2: FraudFormDataV2 = {
   merch_lat: 36.43012,
   merch_long: -81.1795,
 };
+
+export const FRAUD_RETAIL_SAMPLE_V2: FraudFormDataV2 = {
+  first: "Sarah",
+  last: "Connor",
+  gender: "Female",
+  dob: "1992-05-14",
+  job: "Architect",
+  cc_num: 4532019827364512,
+  trans_num: "tx_99881122",
+  trans_date_trans_time: "2019-01-05T14:22",
+  unix_time: 1546700520,
+  amt: 42.15,
+  category: "Shopping (POS)",
+  merchant: "fraud_Kirlin and Sons",
+  street: "742 Evergreen Terrace",
+  city: "Springfield",
+  state: "IL",
+  zip: 62701,
+  city_pop: 114000,
+  lat: 39.7817,
+  long: -89.6501,
+  merch_lat: 39.7825,
+  merch_long: -89.6492,
+};
+
+export const FRAUD_EXAMPLES: ExampleScenario<FraudFormDataV2>[] = [
+  {
+    id: "genuine-online",
+    title: "Genuine Online Purchase",
+    badge: "Not Fraud",
+    badgeType: "success",
+    summary: "$100.50 online order • NYC cardholder • Matching merchant location",
+    data: FRAUD_GENUINE_SAMPLE_V2,
+  },
+  {
+    id: "high-risk-anomaly",
+    title: "High-Risk Anomaly",
+    badge: "Fraud Expected",
+    badgeType: "danger",
+    summary: "$281.06 late-night grocery POS • Rural NC • Remote coordinate gap",
+    data: FRAUD_HIGH_RISK_SAMPLE_V2,
+  },
+  {
+    id: "retail-pos",
+    title: "Normal Retail Purchase",
+    badge: "Not Fraud",
+    badgeType: "success",
+    summary: "$42.15 in-store retail • Springfield IL • Local daytime purchase",
+    data: FRAUD_RETAIL_SAMPLE_V2,
+  },
+];

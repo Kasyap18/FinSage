@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -10,16 +10,21 @@ import { WizardProgress } from "@/components/wizard/WizardProgress";
 import { WizardStep } from "@/components/wizard/WizardStep";
 import { ResultView } from "@/components/result/ResultView";
 import { ReviewSection } from "@/components/result/ReviewSection";
+import { QuickExamplesBar } from "@/components/wizard/QuickExamplesBar";
 
 import {
   loanFields,
   type LoanFieldMetadata,
   type LoanSection,
-} from "@/features/loan/loanMetadata";
+} from "@/features/loan/loanMetadataV2";
 import {
   loanSchema,
   type LoanFormData,
-} from "@/features/loan/loanSchema";
+} from "@/features/loan/loanSchemaV2";
+import {
+  LOAN_EXAMPLES,
+  type ExampleScenario,
+} from "@/features/testSamplesV2";
 import { loanApiService } from "@/services/api/loanApiService";
 import type { PredictionOutput } from "@/types/models";
 
@@ -153,6 +158,8 @@ function LoanField({
 
 export function LoanPage() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [activeExampleId, setActiveExampleId] = useState<string | null>(null);
+  const [hasVisitedReview, setHasVisitedReview] = useState(false);
   const [prediction, setPrediction] =
     useState<PredictionOutput | null>(null);
   const [serviceError, setServiceError] =
@@ -162,6 +169,7 @@ export function LoanPage() {
     register,
     trigger,
     getValues,
+    reset,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoanFormData>({
@@ -177,6 +185,35 @@ export function LoanPage() {
     [],
   );
 
+  const handleSelectExample = (example: ExampleScenario<LoanFormData>) => {
+    setActiveExampleId(example.id);
+    reset(example.data);
+    setServiceError(null);
+    setPrediction(null);
+    setHasVisitedReview(true);
+    // Jump straight to the Review step
+    setCurrentStep(sectionOrder.length);
+  };
+
+  const handleResetForm = () => {
+    setActiveExampleId(null);
+    setHasVisitedReview(false);
+    setServiceError(null);
+    setPrediction(null);
+    reset();
+    setCurrentStep(0);
+  };
+
+  const handleJumpToReview = async () => {
+    if (currentStep < sectionOrder.length) {
+      const fields = sectionFieldNames[currentStep];
+      const valid = await trigger(fields);
+      if (!valid) return;
+    }
+    setHasVisitedReview(true);
+    setCurrentStep(sectionOrder.length);
+  };
+
   const handleNext = async () => {
     // Steps 0-4 = actual form sections
     if (currentStep < sectionOrder.length) {
@@ -186,6 +223,10 @@ export function LoanPage() {
 
       if (!valid) {
         return;
+      }
+
+      if (currentStep === sectionOrder.length - 1) {
+        setHasVisitedReview(true);
       }
 
       setCurrentStep((step) => step + 1);
@@ -234,16 +275,27 @@ export function LoanPage() {
   };
 
   const handleRestart = () => {
-    window.location.reload();
+    setActiveExampleId(null);
+    setPrediction(null);
+    setServiceError(null);
+    setCurrentStep(0);
   };
 
-  // Result
+  // Result view
   if (
     currentStep === sectionOrder.length + 2 &&
     prediction !== null
   ) {
     return (
       <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+        <QuickExamplesBar
+          title="Test Another Loan Scenario"
+          examples={LOAN_EXAMPLES}
+          activeExampleId={activeExampleId}
+          onSelectExample={handleSelectExample}
+          onClear={handleResetForm}
+        />
+
         <Card>
           <CardContent className="p-5 sm:p-8">
             <ResultView
@@ -262,9 +314,11 @@ export function LoanPage() {
       ? sectionOrder[currentStep]
       : null;
 
+  const currentExample = LOAN_EXAMPLES.find((ex) => ex.id === activeExampleId);
+
   return (
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mb-8">
+      <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           Loan Default Detection
         </p>
@@ -274,10 +328,19 @@ export function LoanPage() {
         </h1>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Enter the applicant, property, credit, and loan details
-          below. Review everything before starting the analysis.
+          Enter applicant, property, credit, and loan details below. Review everything before starting the analysis.
         </p>
       </div>
+
+      {/* 1-Click Example Scenarios */}
+      <QuickExamplesBar
+        title="Quick Demo Examples"
+        subtitle="Click an example to auto-fill all 31 fields and jump straight to Review to inspect or edit any value."
+        examples={LOAN_EXAMPLES}
+        activeExampleId={activeExampleId}
+        onSelectExample={handleSelectExample}
+        onClear={activeExampleId ? handleResetForm : undefined}
+      />
 
       <Card>
         <CardContent className="p-5 sm:p-7">
@@ -288,7 +351,7 @@ export function LoanPage() {
 
           <div className="my-8 border-t border-slate-200" />
 
-          {/* Form sections */}
+          {/* Form sections (Steps 0-4) */}
           {currentStep < sectionOrder.length &&
             activeSection && (
               <WizardStep
@@ -310,12 +373,26 @@ export function LoanPage() {
               </WizardStep>
             )}
 
-          {/* Review */}
+          {/* Review (Step 5) */}
           {currentStep === sectionOrder.length && (
             <div className="space-y-5">
+              {currentExample && (
+                <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-xs text-indigo-900">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-indigo-600" />
+                    <span>
+                      Loaded scenario: <strong>{currentExample.title}</strong> ({currentExample.badge})
+                    </span>
+                  </div>
+                  <span className="text-slate-500">
+                    Click <strong>Edit</strong> on any section below to change values.
+                  </span>
+                </div>
+              )}
+
               <WizardStep
                 title="Review your assessment"
-                description="Check all submitted information before analysis."
+                description="Check all submitted information before analysis. Click Edit on any section to modify specific inputs."
               >
                 {sectionOrder.map((section, index) => (
                   <ReviewSection
@@ -330,7 +407,7 @@ export function LoanPage() {
             </div>
           )}
 
-          {/* Analyze */}
+          {/* Analyze (Step 6) */}
           {currentStep === sectionOrder.length + 1 && (
             <WizardStep
               title="Ready to analyze"
@@ -381,6 +458,8 @@ export function LoanPage() {
                 currentStep={currentStep}
                 totalSteps={steps.length - 1}
                 isSubmitting={isSubmitting}
+                canJumpToReview={hasVisitedReview && currentStep < sectionOrder.length}
+                onJumpToReview={handleJumpToReview}
                 onBack={handleBack}
                 onNext={handleNext}
               />
