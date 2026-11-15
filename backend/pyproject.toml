@@ -1,0 +1,22 @@
+[project]
+name = "finsage-backend"
+version = "0.2.0"
+description = "FinSage ML Risk Detection FastAPI Backend"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.30,<1.0",
+    "pydantic>=2.0,<3.0",
+    "httpx>=0.27.0",
+    "joblib>=1.4.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "scikit-learn==1.6.1",
+    "xgboost>=2.1.0",
+    "tensorflow>=2.16.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
