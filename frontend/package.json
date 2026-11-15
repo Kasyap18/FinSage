@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev2": "vite --config vite.config.v2.ts",
     "build": "tsc -b && vite build",
+    "build:v2": "tsc -b && vite build --config vite.config.v2.ts",
     "preview": "vite preview",
     "lint": "eslint ."
   },
