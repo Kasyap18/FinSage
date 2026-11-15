@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -9,6 +9,7 @@ import { WizardProgress } from "@/components/wizard/WizardProgress";
 import { WizardStep } from "@/components/wizard/WizardStep";
 import { ResultView } from "@/components/result/ResultView";
 import { ReviewSectionV2 } from "@/components/result/ReviewSectionV2";
+import { QuickExamplesBar } from "@/components/wizard/QuickExamplesBar";
 
 import {
   fraudFieldsV2,
@@ -19,7 +20,10 @@ import {
   fraudSchemaV2,
   type FraudFormDataV2,
 } from "@/features/fraud/fraudSchemaV2";
-// import { mockFraudServiceV2 } from "@/services/mock/mockFraudServiceV2";
+import {
+  FRAUD_EXAMPLES,
+  type ExampleScenario,
+} from "@/features/testSamplesV2";
 import { fraudApiServiceV2 } from "@/services/api/fraudApiServiceV2";
 import type { PredictionOutput } from "@/types/models";
 
@@ -102,16 +106,15 @@ function FraudFieldV2({
             step={field.step ?? 1}
             min={field.min}
             max={field.max}
-            placeholder={field.placeholder}
-            {...register(field.name, { valueAsNumber: true })}
+            {...register(field.name, {
+              valueAsNumber: true,
+            })}
             className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
           />
         ) : (
           <input
             id={field.name}
             type={field.type}
-            step={field.type === "datetime-local" ? 1 : undefined}
-            placeholder={field.placeholder}
             {...register(field.name)}
             className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
           />
@@ -148,6 +151,8 @@ function FraudFieldV2({
 
 export function FraudPageV2() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [activeExampleId, setActiveExampleId] = useState<string | null>(null);
+  const [hasVisitedReview, setHasVisitedReview] = useState(false);
   const [prediction, setPrediction] = useState<PredictionOutput | null>(null);
   const [serviceError, setServiceError] = useState<string | null>(null);
 
@@ -155,6 +160,7 @@ export function FraudPageV2() {
     register,
     trigger,
     getValues,
+    reset,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FraudFormDataV2>({
@@ -170,6 +176,35 @@ export function FraudPageV2() {
     [],
   );
 
+  const handleSelectExample = (example: ExampleScenario<FraudFormDataV2>) => {
+    setActiveExampleId(example.id);
+    reset(example.data);
+    setServiceError(null);
+    setPrediction(null);
+    setHasVisitedReview(true);
+    // Jump straight to the Review step (index 4)
+    setCurrentStep(sectionOrder.length);
+  };
+
+  const handleResetForm = () => {
+    setActiveExampleId(null);
+    setHasVisitedReview(false);
+    setServiceError(null);
+    setPrediction(null);
+    reset();
+    setCurrentStep(0);
+  };
+
+  const handleJumpToReview = async () => {
+    if (currentStep < sectionOrder.length) {
+      const fields = sectionFieldNames[currentStep];
+      const valid = await trigger(fields);
+      if (!valid) return;
+    }
+    setHasVisitedReview(true);
+    setCurrentStep(sectionOrder.length);
+  };
+
   // Steps 0-3 are the four input sections.
   // Step 4 is review, step 5 is analyze, step 6 is result.
   const handleNext = async () => {
@@ -178,6 +213,10 @@ export function FraudPageV2() {
       const valid = await trigger(fields);
 
       if (!valid) return;
+
+      if (currentStep === 3) {
+        setHasVisitedReview(true);
+      }
 
       setCurrentStep((step) => step + 1);
       return;
@@ -209,7 +248,6 @@ export function FraudPageV2() {
     setServiceError(null);
 
     try {
-      // const result = await mockFraudServiceV2.predict(data);
       const result = await fraudApiServiceV2.predict(data);
       setPrediction(result);
       setCurrentStep(6);
@@ -222,12 +260,23 @@ export function FraudPageV2() {
   };
 
   const handleRestart = () => {
-    window.location.reload();
+    setActiveExampleId(null);
+    setPrediction(null);
+    setServiceError(null);
+    setCurrentStep(0);
   };
 
   if (currentStep === 6 && prediction !== null) {
     return (
       <section className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
+        <QuickExamplesBar
+          title="Test Another Fraud Scenario"
+          examples={FRAUD_EXAMPLES}
+          activeExampleId={activeExampleId}
+          onSelectExample={handleSelectExample}
+          onClear={handleResetForm}
+        />
+
         <Card>
           <CardContent className="p-5 sm:p-8">
             <ResultView
@@ -244,9 +293,11 @@ export function FraudPageV2() {
   const activeSection =
     currentStep <= 3 ? sectionOrder[currentStep] : null;
 
+  const currentExample = FRAUD_EXAMPLES.find((ex) => ex.id === activeExampleId);
+
   return (
     <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-      <div className="mb-8">
+      <div className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
           Fraud Detection
         </p>
@@ -258,6 +309,16 @@ export function FraudPageV2() {
           merchant coordinate details before starting the analysis.
         </p>
       </div>
+
+      {/* 1-Click Example Scenarios */}
+      <QuickExamplesBar
+        title="Quick Demo Examples"
+        subtitle="Click an example below to auto-fill all transaction & location details and jump directly to Review to inspect or edit any value."
+        examples={FRAUD_EXAMPLES}
+        activeExampleId={activeExampleId}
+        onSelectExample={handleSelectExample}
+        onClear={activeExampleId ? handleResetForm : undefined}
+      />
 
       <Card>
         <CardContent className="p-5 sm:p-7">
@@ -284,22 +345,38 @@ export function FraudPageV2() {
           )}
 
           {currentStep === 4 && (
-            <WizardStep
-              title="Review your assessment"
-              description="Check all model inputs before analysis."
-            >
-              <div className="space-y-5">
-                {sectionOrder.map((section, index) => (
-                  <ReviewSectionV2
-                    key={section}
-                    title={sectionTitles[section]}
-                    fields={[...fieldsFor(section)]}
-                    values={getValues()}
-                    onEdit={() => handleEdit(index)}
-                  />
-                ))}
-              </div>
-            </WizardStep>
+            <div className="space-y-5">
+              {currentExample && (
+                <div className="flex items-center justify-between rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 text-xs text-indigo-900">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={14} className="text-indigo-600" />
+                    <span>
+                      Loaded scenario: <strong>{currentExample.title}</strong> ({currentExample.badge})
+                    </span>
+                  </div>
+                  <span className="text-slate-500">
+                    Click <strong>Edit</strong> on any section below to change values.
+                  </span>
+                </div>
+              )}
+
+              <WizardStep
+                title="Review your assessment"
+                description="Check all model inputs before analysis. Click Edit on any section to modify specific inputs."
+              >
+                <div className="space-y-5">
+                  {sectionOrder.map((section, index) => (
+                    <ReviewSectionV2
+                      key={section}
+                      title={sectionTitles[section]}
+                      fields={[...fieldsFor(section)]}
+                      values={getValues()}
+                      onEdit={() => handleEdit(index)}
+                    />
+                  ))}
+                </div>
+              </WizardStep>
+            </div>
           )}
 
           {currentStep === 5 && (
@@ -346,8 +423,10 @@ export function FraudPageV2() {
             ) : (
               <WizardNavigation
                 currentStep={currentStep}
-                totalSteps={6}
+                totalSteps={steps.length - 1}
                 isSubmitting={isSubmitting}
+                canJumpToReview={hasVisitedReview && currentStep < 4}
+                onJumpToReview={handleJumpToReview}
                 onBack={handleBack}
                 onNext={handleNext}
               />
@@ -360,4 +439,3 @@ export function FraudPageV2() {
 }
 
 export { FraudPageV2 as FraudPage };
-

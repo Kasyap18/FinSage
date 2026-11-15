@@ -19,10 +19,7 @@ export function AppHeader() {
         </Link>
 
         <div className="flex items-center gap-3">
-          <span className="hidden rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-amber-700 sm:inline-flex">
-            PHASE 5 • FRONTEND
-          </span>
-          <span className="hidden text-xs font-medium text-slate-500 md:block">
+          <span className="text-xs font-medium text-slate-500">
             AI Risk Assessment
           </span>
         </div>
