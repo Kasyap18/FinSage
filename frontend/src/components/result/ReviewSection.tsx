@@ -1,10 +1,15 @@
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { LoanFieldMetadata } from "@/features/loan/loanMetadata";
+
+export interface ReviewableField {
+  name: string;
+  label: string;
+  unit?: string;
+}
 
 interface ReviewSectionProps {
   title: string;
-  fields: LoanFieldMetadata[];
+  fields: readonly ReviewableField[] | ReviewableField[];
   values: Record<string, unknown>;
   onEdit: () => void;
 }
