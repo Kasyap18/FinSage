@@ -1,3 +1,16 @@
+# Extras
+backend/fraud_detect/data/fraudTrain.csv
+backend/fraud_detect/data/fraudTest.csv
+
+# Node ignores
+
+node_modules/
+dist/
+.vite/
+*.local
+.DS_Store
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
