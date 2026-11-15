@@ -1,6 +1,7 @@
 import type { FraudFormData } from "@/features/fraud/fraudSchema";
 import type { PredictionResult, PredictionService } from "@/types/models";
 import { postPrediction } from "@/services/api/apiClient";
+import { mockFraudService } from "@/services/mock/mockFraudService";
 
 type BackendPredictionResponse =
   | number
@@ -56,6 +57,10 @@ function extractPredictionResult(
 
 export const fraudApiService: PredictionService<FraudFormData> = {
   async predict(input) {
+    if (import.meta.env.VITE_USE_MOCK === "true") {
+      return mockFraudService.predict(input);
+    }
+
     const response = await postPrediction<
       FraudFormData,
       BackendPredictionResponse

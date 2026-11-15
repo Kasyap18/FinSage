@@ -1,6 +1,7 @@
 import type { LoanFormData } from "@/features/loan/loanSchema";
 import type { PredictionResult, PredictionService } from "@/types/models";
 import { postPrediction } from "@/services/api/apiClient";
+import { mockLoanService } from "@/services/mock/mockLoanService";
 
 type BackendPredictionResponse =
   | number
@@ -57,6 +58,10 @@ function extractPredictionResult(
 
 export const loanApiService: PredictionService<LoanFormData> = {
   async predict(input) {
+    if (import.meta.env.VITE_USE_MOCK === "true") {
+      return mockLoanService.predict(input);
+    }
+
     const response = await postPrediction<
       LoanFormData,
       BackendPredictionResponse
