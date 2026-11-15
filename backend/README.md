@@ -1,123 +1,95 @@
-# ML Risk Detection — FastAPI Mock Backend (Phase 6.5)
+# ML Risk Detection — FastAPI Backend
 
-This is a temporary FastAPI backend used to establish the complete:
+FastAPI backend providing real-time inference for quantitative risk detection:
+- **Loan Default Detection**: Keras Deep Neural Network (`loan_default_nn.keras` + scikit-learn `preprocessor.pkl`)
+- **Credit Card Fraud Detection**: XGBoost Classifier (`model.xgb.json` + `preprocessing.pkl`)
 
-Frontend -> FastAPI -> mock prediction -> Frontend Result
-
-connection before the real ML models are integrated.
+---
 
 ## Endpoints
 
-### Health
+### Health & Status
+- `GET /` — Service status and version
+- `GET /health` — Health check endpoint (`{"status": "ok"}`)
 
-GET `/health`
+### Loan Default Prediction
+- `POST /api/v1/loan/predict`
+  - Accepts application JSON payload (both raw dataset column codes and user-friendly form field labels are supported).
+  - Returns:
+    ```json
+    {
+      "probability": 0.999548,
+      "prediction": 1,
+      "label": "LOAN DEFAULT"
+    }
+    ```
 
-### Loan
+### Fraud Detection Prediction
+- `POST /api/v1/fraud/predict`
+  - Accepts 21-feature transaction JSON payload (both Title Case and code representations for category and gender are supported).
+  - Returns:
+    ```json
+    {
+      "probability": 0.998759,
+      "prediction": 1,
+      "label": "FRAUD"
+    }
+    ```
 
-POST `/api/v1/loan/predict`
+---
 
-### Fraud
+## Run Locally
 
-POST `/api/v1/fraud/predict`
+### Using Scripts (Recommended)
 
-Both prediction endpoints accept a JSON object and return:
-
-```json
-{
-  "prediction": 0
-}
+**macOS / Linux:**
+```bash
+./run.sh
 ```
 
-For Phase 6.5, the mock always returns `0`.
+**Windows (PowerShell):**
+```powershell
+.\run.ps1
+```
 
-- Loan: `0` = no default / negative class
-- Fraud: `0` = genuine
+### Manual Command
 
-The response shape is intentionally kept as a simple binary prediction so the frontend can later be connected to the actual model without changing the Result UI.
-
-## Run locally
-
+**macOS / Linux:**
 ```bash
-python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-On Windows:
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
+**Windows (PowerShell):**
+```powershell
+.\.venv\Scripts\Activate.ps1
 uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-## Test
+---
 
-Open:
+## Interactive Documentation
 
-`http://127.0.0.1:8000/docs`
+With the server running, visit:
+- **Swagger UI**: `http://127.0.0.1:8000/docs`
+- **ReDoc**: `http://127.0.0.1:8000/redoc`
 
-Health:
+---
 
-```bash
-curl http://127.0.0.1:8000/health
-```
+## Testing
 
-Loan:
-
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/loan/predict \
-  -H "Content-Type: application/json" \
-  -d '{"test": true}'
-```
-
-Fraud:
+Run model unit tests and endpoint validation:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/fraud/predict \
-  -H "Content-Type: application/json" \
-  -d '{"test": true}'
+# 1. Test Loan Default model directly
+python loan_default/test_prediction.py
+
+# 2. Test Fraud Detection model directly
+python fraud_detect/test_prediction.py
+
+# 3. Test all FastAPI endpoints in-process
+python test_fastapi_endpoints.py
+
+# 4. Test all endpoints against the live server
+python test_fastapi_endpoints.py --live
 ```
-
-## Frontend configuration
-
-Set the frontend `.env.local` to:
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000
-VITE_LOAN_PREDICT_ENDPOINT=/api/v1/loan/predict
-VITE_FRAUD_PREDICT_ENDPOINT=/api/v1/fraud/predict
-```
-
-Then restart Vite:
-
-```bash
-npm run dev
-```
-
-## Replacing the mock later
-
-The only prediction logic that needs replacing is:
-
-```python
-def mock_prediction(payload):
-    return 0
-```
-
-Replace it with the actual pipeline:
-
-```text
-request
-  ↓
-validation
-  ↓
-preprocessing / encoder / scaler
-  ↓
-model
-  ↓
-0 / 1
-```
-
-The endpoint paths and response contract can remain unchanged unless the backend developer intentionally changes the API contract.
