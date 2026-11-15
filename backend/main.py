@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 from fastapi import FastAPI
@@ -13,14 +14,21 @@ app = FastAPI(
     description="Loan Default (Neural Network) and Fraud Detection (XGBoost) prediction API.",
 )
 
-# Development CORS configuration.
-# Restrict this to your actual frontend origin for production.
+cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://kasyap18.github.io",
+]
+
+env_origins = os.getenv("ALLOWED_ORIGINS")
+if env_origins:
+    cors_origins.extend(
+        [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
